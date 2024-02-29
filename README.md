@@ -1,3 +1,9 @@
+# DISCLAIMER
+
+I (Fiddy) forked this repo for the sole purpose of updating tex.py to suppport the newer TEX file format. I make no guarantees as to the functionality of any other parts of this codebase.
+
+# Original README
+
 [这里有中文版](README.zh.md)
 
 This an unofficial localization project for game EXAPUNKS.
