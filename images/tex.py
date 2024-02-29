@@ -21,38 +21,41 @@ class Tex:
         if read_io.read(len(self.SIGN)) != self.SIGN:
             raise TypeError('wrong file type')
         
-        # Skip over 0x4 bytes of unneeded data. Address now 0x8.
-        self.unknownData = unpack("<I", read_io.read(4))
+        # Read 0x4 bytes. Address now 0x8.
+        self.imageCount, = unpack("<I", read_io.read(4))
 
-        # Read 0xC (12) bytes. Address now 0x14.
-        self.width, self.height, self.type = unpack("<3I", read_io.read(0xc))
-        
-        # Skip over 0x34 bytes of unneeded data. Address now 0x48.
-        self.dummy = read_io.read(0x34)
-        zsize, = unpack('<I', read_io.read(4))
-        self.zbuf = read_io.read(zsize)
+        for i in range(self.imageCount):
+            # Read 0xC (12) bytes. Address now 0x14.
+            self.imageData[i].width, self.imageData[i].height, self.imageData[i].type = unpack("<3I", read_io.read(0xc))
+            
+            # Skip over 0x34 bytes of unneeded data. Address now 0x48.
+            self.imageData[i].dummy = read_io.read(0x34)
+            zsize, = unpack('<I', read_io.read(4))
+            self.imageData[i].zbuf = read_io.read(zsize)
 
     def save(self, write_io):
         write_io.write(self.SIGN)
-        write_io.write(self.unknownData)
-        write_io.write(pack("<3I", self.width, self.height, self.type))
-        write_io.write(self.dummy)
-        write_io.write(pack('<I', len(self.zbuf)))
-        write_io.write(self.zbuf)
+        write_io.write(self.imageCount)
+        for i in range (self.imageCount):
+            write_io.write(pack("<3I", self.imageData[i].width, self.imageData[i].height, self.imageData[i].type))
+            write_io.write(self.imageData[i].dummy)
+            write_io.write(pack('<I', len(self.imageData[i].zbuf)))
+            write_io.write(self.imageData[i].zbuf)
 
     @property
     def image(self):
-        size = self.width * self.height
-        if self.type == 1:
+        
+        size = self.imageData[i].width * self.imageData[i].height
+        if self.imageData[i].type == 1:
             image_type = 'L'
-        elif self.type == 2:
+        elif self.imageData[i].type == 2:
             image_type = 'RGBA'
             size *= 4
         else:
-            raise TypeError('unknown type %x' % self.type)
+            raise TypeError('unknown type %x' % self.imageData[i].type)
 
-        buf = lz4.block.decompress(self.zbuf, uncompressed_size=size)
-        im = Image.new(image_type, (self.width, self.height))
+        buf = lz4.block.decompress(self.imageData[i].zbuf, uncompressed_size=size)
+        im = Image.new(image_type, (self.imageData[i].width, self.imageData[i].height))
         im.frombytes(buf)
         return im.transpose(Image.FLIP_TOP_BOTTOM)
 
